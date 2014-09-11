@@ -2,20 +2,16 @@ __author__ = 'sun'
 
 import os,urllib2,urllib,base64
 import xml.etree.ElementTree as ET
+from novaclient.client import Client
+
 
 stackname = "mystack"
 username = "vcap"
 password = "password"
 
-
+nova = Client(2, "admin", "zjuvlis", "demo", "http://10.10.101.106:35357/v2.0")
 #iplist_cmd  = "nova list  | grep %s | awk '{print $12}' | cut -f 2 -d '=' | cut -f 1 -d ',' "%(stackname)
 
-iplist_cmd = "cat list"
-
-iplist = os.popen(iplist_cmd).read().split("\n")
-
-
-# ip = "10.10.101.132"
 
 def monit_job(ip):
     url = "http://"+ip+":2822/_status?format=xml"
@@ -25,13 +21,7 @@ def monit_job(ip):
     result = urllib2.urlopen(request)
     status_xml = result.read().strip()
     root = ET.fromstring(status_xml)
-    #tree = ET.parse(status_xml)
-    #root = tree.getroot()
-
-
-
     for ch1 in root:
-        #print child.tag,child.attrib
         if ch1.tag == "service" and ch1.attrib['type']=='3':
             for ch2 in ch1:
                 if ch2.tag == 'name':
@@ -43,12 +33,16 @@ def monit_job(ip):
                         print "not monitored"
 
 
+servers = nova.servers.list()
+for server in servers:
+    if "mystack" not in server.name: continue
+    ip = server.networks['private'][0]
+    monit_job(ip)
 
 
-for ip in iplist:
-    if ip != "":
-        print ip
-        monit_job(ip)
 
 
+#iplist_cmd = "cat list"
+
+#iplist = os.popen(iplist_cmd).read().split("\n")
 
